@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestiones BPO</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Estilos -->
+    <link href="./styles.css" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">📞 Gestiones BPO</a>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <!-- ALERTA GLOBAL -->
+        <div id="alertMessage" class="alert d-none"></div>
+
+        <!-- CARD DE CREACIÓN -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Registrar nueva gestión</h5>
+            </div>
+
+            <div class="card-body">
+                <form id="gestionForm" onsubmit="createGestion(event)">
+                    <div class="row g-3">
+
+                        <div class="col-md-4">
+                            <label class="form-label">Documento del cliente</label>
+                            <input type="text" name="clienteDocumento" class="form-control" required>
+                        </div>
+
+                        <div class="col-md-8">
+                            <label class="form-label">Nombre del cliente</label>
+                            <input type="text" name="clienteNombre" class="form-control" required>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">ID Asesor</label>
+                            <input type="text" name="asesorId" class="form-control" required>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Tipificación</label>
+                            <select name="tipificacion" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                <option>Contacto Efectivo</option>
+                                <option>No Contacto</option>
+                                <option>Promesa de Pago</option>
+                                <option>Pago Realizado</option>
+                                <option>Refinanciación</option>
+                                <option>Información</option>
+                                <option>Escalamiento</option>
+                                <option>Otros</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Subtipificación</label>
+                            <input type="text" name="subtipificacion" class="form-control">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Valor compromiso</label>
+                            <input type="number" step="0.01" name="valorCompromiso" class="form-control">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Fecha compromiso</label>
+                            <input type="date" name="fechaCompromiso" class="form-control">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Estado</label>
+                            <select name="estado" class="form-select" required>
+                                <option value="abierta">Abierta</option>
+                                <option value="cerrada">Cerrada</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <button class="btn btn-primary mt-3" type="submit">
+                        <i class="bi bi-save"></i> Guardar gestión
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- LISTADO GESTIONES -->
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Listado de gestiones</h5>
+            </div>
+
+            <div class="card-body">
+
+                <table class="table table-hover text-center">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Documento</th>
+                            <th>Cliente</th>
+                            <th>Asesor</th>
+                            <th>Tipificación</th>
+                            <th>Subtipificación</th>
+                            <th>Valor</th>
+                            <th>Fecha compromiso</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="gestionesTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL EDITAR -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+
+                <div class="modal-header bg-info">
+                    <h5 class="modal-title text-white">Editar Gestión</h5>
+                    <button type="button" class="btn-close bg-white" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="editForm" onsubmit="updateGestion(event)">
+                        <input type="hidden" id="editId">
+
+                        <div class="row g-3">
+
+                            <div class="col-md-4">
+                                <label class="form-label">Documento</label>
+                                <input required id="editClienteDocumento" name="clienteDocumento" class="form-control" required>
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre</label>
+                                <input required id="editClienteNombre" name="clienteNombre" class="form-control" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Asesor</label>
+                                <input required id="editAsesorId" name="asesorId" class="form-control" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Tipificación</label>
+                                <select required id="editTipificacion" name="tipificacion" class="form-select" required>
+                                    <option>Contacto Efectivo</option>
+                                    <option>No Contacto</option>
+                                    <option>Promesa de Pago</option>
+                                    <option>Pago Realizado</option>
+                                    <option>Refinanciación</option>
+                                    <option>Información</option>
+                                    <option>Escalamiento</option>
+                                    <option>Otros</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Subtipificación</label>
+                                <input required id="editSubtipificacion" name="subtipificacion" class="form-control">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Valor</label>
+                                <input required id="editValorCompromiso" name="valorCompromiso" type="number" step="0.01" class="form-control">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Fecha compromiso</label>
+                                <input required id="editFechaCompromiso" name="fechaCompromiso" type="date" class="form-control">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Estado</label>
+                                <select id="editEstado" name="estado" class="form-select" required>
+                                    <option value="abierta">Abierta</option>
+                                    <option value="cerrada">Cerrada</option>
+                                </select>
+                            </div>
+
+                        </div>
+
+                        <button class="btn btn-success mt-3" type="submit">
+                            <i class="bi bi-check-circle"></i> Guardar cambios
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="./js/api.js"></script>
+
+</body>
+</html>

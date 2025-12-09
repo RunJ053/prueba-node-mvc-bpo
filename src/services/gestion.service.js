@@ -1,226 +1,167 @@
-const { Op } = require('sequelize');
-const Gestion = require('../models/gestion.model');
+const { Op } = require("sequelize");
+const Gestion = require("../models/gestion.model");
+const sequelize = require("../config/database");
 
 class GestionService {
-    /**
-     * Crear una nueva gestión
-     * @param {Object} gestionData - Datos de la gestión
-     * @returns {Promise<Object>} Gestión creada
-     */
+
+// ===============================
+    // CREAR
+// ===============================
     async crear(gestionData) {
         try {
-        const gestion = await Gestion.create(gestionData);
-        return gestion;
+            return await Gestion.create(gestionData);
         } catch (error) {
-        if (error.name === 'SequelizeValidationError') {
-            const messages = error.errors.map(e => e.message);
-            throw new Error(`Errores de validación: ${messages.join(', ')}`);
-        }
-        throw error;
+            if (error.name === "SequelizeValidationError") {
+                const messages = error.errors.map(e => e.message);
+                throw new Error(`Errores de validación: ${messages.join(", ")}`);
+            }
+            throw error;
         }
     }
 
-    /**
-     * Listar gestiones con filtros y paginación
-     * @param {Object} filtros - Filtros de búsqueda
-     * @returns {Promise<Object>} Lista paginada de gestiones
-     */
+    // ===============================
+    // LISTAR CON FILTROS Y PAGINACIÓN
+    // ===============================
     async listar(filtros = {}) {
         const {
-        page = 1,
-        limit = 10,
-        q = '',
-        tipificacion,
-        asesorId,
-        estado,
-        desde,
-        hasta
+            page = 1,
+            limit = 3,
+            q = "",
+            tipificacion,
+            asesorId,
+            estado,
+            desde,
+            hasta
         } = filtros;
 
-        // Convertir a números
-        const pageNum = parseInt(page, 10);
-        const limitNum = parseInt(limit, 10);
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
         const offset = (pageNum - 1) * limitNum;
 
-        // Construir condiciones WHERE
         const whereConditions = {};
 
-        // Búsqueda por texto (nombre o documento del cliente)
-        if (q && q.trim() !== '') {
-        whereConditions[Op.or] = [
-            { clienteNombre: { [Op.like]: `%${q}%` } },
-            { clienteDocumento: { [Op.like]: `%${q}%` } }
-        ];
+        if (q.trim() !== "") {
+            whereConditions[Op.or] = [
+                { clienteNombre: { [Op.like]: `%${q}%` } },
+                { clienteDocumento: { [Op.like]: `%${q}%` } }
+            ];
         }
 
-        // Filtro por tipificación
-        if (tipificacion) {
-        whereConditions.tipificacion = tipificacion;
-        }
+        if (tipificacion) whereConditions.tipificacion = tipificacion;
+        if (asesorId) whereConditions.asesorId = asesorId;
+        if (estado) whereConditions.estado = estado;
 
-        // Filtro por asesor
-        if (asesorId) {
-        whereConditions.asesorId = asesorId;
-        }
-
-        // Filtro por estado
-        if (estado) {
-        whereConditions.estado = estado;
-        }
-
-        // Filtro por rango de fechas
+        // Rango de fechas
         if (desde || hasta) {
-        whereConditions.createdAt = {};
-        if (desde) {
-            whereConditions.createdAt[Op.gte] = new Date(desde);
-        }
-        if (hasta) {
-            // Agregar 23:59:59 a la fecha 'hasta' para incluir todo el día
-            const hastaDate = new Date(hasta);
-            hastaDate.setHours(23, 59, 59, 999);
-            whereConditions.createdAt[Op.lte] = hastaDate;
-        }
+            whereConditions.createdAt = {};
+
+            if (desde) whereConditions.createdAt[Op.gte] = new Date(desde);
+
+            if (hasta) {
+                const h = new Date(hasta);
+                h.setHours(23, 59, 59, 999);
+                whereConditions.createdAt[Op.lte] = h;
+            }
         }
 
-        try {
         const { count, rows } = await Gestion.findAndCountAll({
             where: whereConditions,
             limit: limitNum,
-            offset: offset,
-            order: [['createdAt', 'DESC']],
+            offset,
+            order: [["id", "ASC"]],
             distinct: true
         });
-
-        const totalPages = Math.ceil(count / limitNum);
 
         return {
             data: rows,
             pagination: {
-            page: pageNum,
-            limit: limitNum,
-            total: count,
-            totalPages: totalPages
+                page: pageNum,
+                limit: limitNum,
+                total: count,
+                totalPages: Math.ceil(count / limitNum)
             }
         };
-        } catch (error) {
-        throw new Error(`Error al listar gestiones: ${error.message}`);
-        }
     }
 
-    /**
-     * Obtener una gestión por ID
-     * @param {number} id - ID de la gestión
-     * @returns {Promise<Object|null>} Gestión encontrada o null
-     */
+    // ===============================
+    // OBTENER POR ID
+    // ===============================
     async obtenerPorId(id) {
-        try {
+        return await Gestion.findByPk(id);
+    }
+
+    // ===============================
+    // ACTUALIZAR COMPLETO (PUT)
+    // ===============================
+    async actualizar(id, data) {
         const gestion = await Gestion.findByPk(id);
-        return gestion;
+
+        if (!gestion) return null;
+
+        try {
+            await gestion.update(data);
+            return gestion;
         } catch (error) {
-        throw new Error(`Error al obtener gestión: ${error.message}`);
+            if (error.name === "SequelizeValidationError") {
+                const messages = error.errors.map(e => e.message);
+                throw new Error(`Errores de validación: ${messages.join(", ")}`);
+            }
+            throw new Error(`Error al actualizar gestión: ${error.message}`);
         }
     }
 
-    /**
-   * Actualizar una gestión completamente (PUT)
-   * @param {number} id - ID de la gestión
-   * @param {Object} gestionData - Datos completos de la gestión
-   * @returns {Promise<Object|null>} Gestión actualizada o null
-   */
-    async actualizar(id, gestionData) {
-        try {
+    // ===============================
+    // ACTUALIZAR PARCIAL (PATCH)
+    // ===============================
+    async actualizarParcial(id, data) {
         const gestion = await Gestion.findByPk(id);
-        
-        if (!gestion) {
-            return null;
-        }
+        if (!gestion) return null;
 
-        await gestion.update(gestionData);
-        return gestion;
+        try {
+            await gestion.update(data, { fields: Object.keys(data) });
+            return gestion;
         } catch (error) {
-        if (error.name === 'SequelizeValidationError') {
-            const messages = error.errors.map(e => e.message);
-            throw new Error(`Errores de validación: ${messages.join(', ')}`);
-        }
-        throw new Error(`Error al actualizar gestión: ${error.message}`);
+            if (error.name === "SequelizeValidationError") {
+                const messages = error.errors.map(e => e.message);
+                throw new Error(`Errores de validación: ${messages.join(", ")}`);
+            }
+            throw new Error(`Error al actualizar gestión: ${error.message}`);
         }
     }
 
-    /**
-     * Actualizar parcialmente una gestión (PATCH)
-     * @param {number} id - ID de la gestión
-     * @param {Object} gestionData - Datos parciales a actualizar
-     * @returns {Promise<Object|null>} Gestión actualizada o null
-     */
-    async actualizarParcial(id, gestionData) {
-        try {
-        const gestion = await Gestion.findByPk(id);
-        
-        if (!gestion) {
-            return null;
-        }
-
-        // Solo actualizar los campos proporcionados
-        await gestion.update(gestionData, { fields: Object.keys(gestionData) });
-        return gestion;
-        } catch (error) {
-        if (error.name === 'SequelizeValidationError') {
-            const messages = error.errors.map(e => e.message);
-            throw new Error(`Errores de validación: ${messages.join(', ')}`);
-        }
-        throw new Error(`Error al actualizar gestión: ${error.message}`);
-        }
-    }
-
-    /**
-     * Eliminar (borrado lógico) una gestión
-     * @param {number} id - ID de la gestión
-     * @returns {Promise<boolean>} true si se eliminó, false si no existe
-     */
+    // ===============================
+    // ELIMINAR (BORRADO REAL)
+    // ===============================
     async eliminar(id) {
-        try {
         const gestion = await Gestion.findByPk(id);
-        
-        if (!gestion) {
-            return false;
-        }
+        if (!gestion) return false;
 
-        // Borrado lógico: cambiar estado a 'cerrada'
-        await gestion.update({ estado: 'cerrada' });
+        await gestion.destroy(); // 💥 ELIMINACIÓN REAL
         return true;
-        } catch (error) {
-        throw new Error(`Error al eliminar gestión: ${error.message}`);
-        }
     }
 
-    /**
-     * Obtener estadísticas de gestiones
-     * @returns {Promise<Object>} Estadísticas
-     */
+    // ===============================
+    // ESTADÍSTICAS
+    // ===============================
     async obtenerEstadisticas() {
         try {
-        const total = await Gestion.count();
-        const abiertas = await Gestion.count({ where: { estado: 'abierta' } });
-        const cerradas = await Gestion.count({ where: { estado: 'cerrada' } });
+            const total = await Gestion.count();
+            const abiertas = await Gestion.count({ where: { estado: "abierta" } });
+            const cerradas = await Gestion.count({ where: { estado: "cerrada" } });
 
-        const porTipificacion = await Gestion.findAll({
-            attributes: [
-            'tipificacion',
-            [sequelize.fn('COUNT', sequelize.col('id')), 'count']
-            ],
-            group: ['tipificacion']
-        });
+            const porTipificacion = await Gestion.findAll({
+                attributes: [
+                    "tipificacion",
+                    [sequelize.fn("COUNT", sequelize.col("id")), "count"]
+                ],
+                group: ["tipificacion"]
+            });
 
-        return {
-            total,
-            abiertas,
-            cerradas,
-            porTipificacion
-        };
+            return { total, abiertas, cerradas, porTipificacion };
         } catch (error) {
-        throw new Error(`Error al obtener estadísticas: ${error.message}`);
+            throw new Error(`Error al obtener estadísticas: ${error.message}`);
         }
     }
-    }
+}
 
 module.exports = new GestionService();
