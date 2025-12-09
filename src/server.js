@@ -1,6 +1,6 @@
 require('dotenv').config();
 const app = require('./app');
-const { testConnection, sequelize } = require('./config/database');
+const { sequelize, testConnection } = require('./config/database');
 const { syncDatabase } = require('./models');
 
 const PORT = process.env.PORT || 3000;
