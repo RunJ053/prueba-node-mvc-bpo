@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');  // 🆕 AGREGADO
 const routes = require('./routes');
 const { notFoundHandler, errorHandler } = require('./middlewares/error.handler');
 
@@ -21,6 +22,9 @@ app.use(express.json());
 
 // Parser de URL-encoded (formularios)
 app.use(express.urlencoded({ extended: true }));
+
+// Servir archivos estáticos desde la carpeta public
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Logging de requests en desarrollo
 if (process.env.NODE_ENV === 'development') {
@@ -48,6 +52,11 @@ app.get('/health', (req, res) => {
 
 // Rutas de la API con prefijo /api/v1
 app.use('/api/v1', routes);
+
+// Ruta para la interfaz web (debe estar ANTES del notFoundHandler)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));   
+});
 
 // ============================================
 // MANEJO DE ERRORES
